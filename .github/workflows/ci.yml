@@ -2,49 +2,62 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - temp/sprint-2-all
+      - develop
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - temp/sprint-2-all
+      - develop
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 8
-        
-    - name: Install dependencies
-      run: pnpm install
-      
-    - name: Run Lint
-      run: pnpm lint
-      
-    - name: Run Unit/Integration Tests
-      run: pnpm test
 
-    - name: Build applications
-      run: pnpm build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        working-directory: ./apps/api
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy" 
+
+      - name: Run Lint
+        run: pnpm lint
+
+      - name: Run Unit/Integration Tests
+        run: pnpm test
+
+      - name: Build applications
+        run: pnpm build
 
   deploy-staging:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy to Staging (Simulated via Docker Compose)
-      run: |
-        echo "Simulating deployment to staging VPS via SSH..."
-        echo "In a real scenario, this would use appleboy/ssh-action to pull code and run docker compose up -d"
-        # docker compose up -d --build
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging (Simulated via Docker Compose)
+        run: |
+          echo "Simulating deployment to staging VPS via SSH..."
+          echo "In a real scenario, this would use appleboy/ssh-action to pull code and run docker compose up -d"
+          # docker compose up -d --build
